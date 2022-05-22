@@ -21,21 +21,21 @@ func (task *Task)Init() {
 	task.client = http.Client{ Timeout : time.Second }
 }
 
-func (task *Task)Work(args ...interface{}) (bool, int64) {
+func (task *Task)Work(args ...interface{}) (bool, int) {
 	/*此函数为压测具体事项，如下为GET github首页的示例
 	this is an example for requesting github webpage with GET method
 	*/
 	req, _ := http.NewRequest("GET", "https://github.com/", strings.NewReader(""))
 	req.Header.Add("User-Agent","curl/7.64.1")
-	var start_time, cost_time int64
-	start_time = int64(time.Now().UnixNano() / 1e6)
+	var start_time, cost_time int
+	start_time = int(time.Now().UnixNano() / 1e6)
 	resp, err := task.client.Do(req) //此处使用了上面初始化的client
 	if err != nil {
 		fmt.Println(err)
 		return false, 0
 	}
 	ioutil.ReadAll(resp.Body)
-	end_time := int64(time.Now().UnixNano() / 1e6)
+	end_time := int(time.Now().UnixNano() / 1e6)
 	cost_time = end_time - start_time
 	if resp != nil {
 		defer resp.Body.Close()
@@ -45,7 +45,7 @@ func (task *Task)Work(args ...interface{}) (bool, int64) {
 		fmt.Printf("Expect 200, %d GET!", resp.StatusCode)
 		return false, 0
 	}
-	return true, int64(cost_time)
+	return true, cost_time
 	//fmt.Println(resp)
 }
 
