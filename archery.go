@@ -198,8 +198,8 @@ func StartSlave(master_addr string) {
 func main() {
 	config := StartFlag{}
 	flag.StringVar(&config.mode, "mode", "single", "specify start mode, valid value: [single,slave,master,monitor]")
-	flag.IntVar(&config.port, "port", 6767, "specify listen port(for master or single mode)")
-	flag.StringVar(&config.master_addr, "master_addr", "127.0.0.1:6767", "specify the master address(ip or hostname)")
+	flag.IntVar(&config.port, "port", 8018, "specify listen port(for master or single mode)")
+	flag.StringVar(&config.master_addr, "master_addr", "127.0.0.1:8018", "specify the master address(ip or hostname)")
 	flag.Parse()
 	if (config.mode == "single") {
 		StartSingle(config.port)
