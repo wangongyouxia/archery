@@ -1,0 +1,11 @@
+h2 {
+	text-align:right;
+}
+.juzhong {
+	margin:0 auto;
+	float:none;
+
+}
+.zhizhen:hover {
+	cursor:pointer;
+}

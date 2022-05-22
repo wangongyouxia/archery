@@ -1,0 +1,183 @@
+<html>
+	<head>
+		<meta charset='UTF-8'>
+		<script src="/static/jquery.min.js"></script>
+		<link rel="stylesheet" type="text/css" href="/static/bootstrap.min.css">
+		<link rel="stylesheet" type="text/css" href="/static/archery.css">
+		<link rel="shortcut icon" href="/static/archery.ico" >
+		<meta charset='UTF-8'><script src="/static/bootstrap.min.js"></script>
+		<meta charset='UTF-8'><script src="/static/echarts.min.js"></script>
+		<meta charset='UTF-8'><script src="/static/archery.js"></script>
+		<title>Archery</title>
+	</head>
+	<body>
+<div class="container">
+	<div class="row clearfix">
+		<div class="col-md-12 column">
+			<div class="row clearfix">
+				<div class="col-md-7 column">
+					<img width="110" height="100" src="static/archery.png" />
+				</div>
+				<div class="col-md-5 column">
+					<h2 id="slave">
+					</h2>
+					<h2 id="status">
+						Stop
+					</h2>
+				</div>
+			</div>
+			<nav class="navbar navbar-default" role="navigation">
+				<div class="navbar-header">
+					 <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1"> <span class="sr-only">Toggle navigation</span><span class="icon-bar"></span><span class="icon-bar"></span><span class="icon-bar"></span></button> <a class="navbar-brand" href="#">Archery</a>
+				</div>
+				
+				<div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+					<ul class="nav navbar-nav">
+						<li class="nav zhizhen" id="start_nav">
+							 <a onclick="show_start();">开始</a>
+						</li>
+						<li class="nav zhizhen" id="chart_nav">
+							 <a onclick="show_chart();">图表</a>
+						</li>
+						<li class="nav zhizhen" id="sum_nav">
+							 <a onclick="show_sum();">汇总</a>
+						</li>
+<!--						<li class="dropdown">
+							 <a href="#" class="dropdown-toggle" data-toggle="dropdown">Dropdown<strong class="caret"></strong></a>
+							<ul class="dropdown-menu">
+								<li>
+									 <a href="#">Action</a>
+								</li>
+								<li>
+									 <a href="#">Another action</a>
+								</li>
+								<li>
+									 <a href="#">Something else here</a>
+								</li>
+								<li class="divider">
+								</li>
+								<li>
+									 <a href="#">Separated link</a>
+								</li>
+								<li class="divider">
+								</li>
+								<li>
+									 <a href="#">One more separated link</a>
+								</li>
+							</ul>
+						</li>
+					</ul>
+					<form class="navbar-form navbar-left" role="search">
+						<div class="form-group">
+							<input type="text" class="form-control" />
+						</div> <button onclick="start_test()" class="btn btn-default">Submit</button>
+					</form>
+					<ul class="nav navbar-nav navbar-right">
+						<li>
+							 <a href="#">Link</a>
+						</li>
+						<li class="dropdown">
+							 <a href="#" class="dropdown-toggle" data-toggle="dropdown">Dropdown<strong class="caret"></strong></a>
+							<ul class="dropdown-menu">
+								<li>
+									 <a href="#">Action</a>
+								</li>
+								<li>
+									 <a href="#">Another action</a>
+								</li>
+								<li>
+									 <a href="#">Something else here</a>
+								</li>
+								<li class="divider">
+								</li>
+								<li>
+									 <a href="#">Separated link</a>
+								</li>
+							</ul>
+							</li>-->
+					</ul>
+				</div>
+				
+			</nav>
+		</div>
+	</div>
+	<div class="row clearfix">
+		<div class="col-md-12 column">
+			<div id="start" class=" col-md-6 juzhong" style="margin-top:50px;">
+				<div class="form-group">
+					 <b class="col-sm-2">目标qps</b>
+					<div class="col-sm-5">
+						<input type="text" class="form-control" id="target-qps" />
+					</div>
+				<br/>
+				<br/>
+					 <b style="padding:0px" class="col-sm-2 control-label">每秒增加数</b>
+					<div class="col-sm-5">
+						<input type="text" class="form-control" id="increase-per-second" />
+					</div>
+				</div>
+				<br/>
+<!--				<div class="form-group">
+					<div class="col-sm-offset-2 col-sm-10">
+						<div class="checkbox">
+							 <label><input type="checkbox" />Remember me</label>
+						</div>
+					</div>
+				</div>
+				<br/>
+-->				<div class="form-group" style="padding-top:5px">
+					<div class="col-sm-offset-2 col-sm-10">
+						 <button onclick="start_test()" class="btn btn-success">Start</button>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+	<div class="row clearfix">
+		<div class="col-md-12 column" id="chart_div" style="text-align:center">
+			<div id="chart" style="width: 1000px;height:375px;" class="juzhong"></div>
+			<div id="chart_server" style="width: 1000px;height:375px;" class="juzhong"></div>
+			<button type="button" onclick="stop_test()" class="btn btn-info juzhong">停止</button>
+		</div>
+	</div>
+	<div class="row clearfix">
+		<div class="col-md-12 column" id="sum_div">
+			<table class="table">
+				<thead>
+					<tr>
+						<th>
+							总请求数
+						</th>
+						<th>
+							总成功响应数
+						</th>
+						<th>
+							成功平均延时
+						</th>
+						<th>
+							失败数
+						</th>
+					</tr>
+				</thead>
+				<tbody>
+					<tr class="active">
+						<td id="req_num_sum">
+							0
+						</td>
+						<td id="succ_resp_num_sum">
+							0
+						</td>
+						<td id="succ_resp_average_cost">
+							0
+						</td>
+						<td id="failed_num_sum">
+							0
+						</td>
+					</tr>
+				</tbody>
+			</table>
+		</div>
+	</div>
+</div>
+	</body>
+</html>
