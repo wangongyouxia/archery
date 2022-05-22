@@ -191,6 +191,7 @@ func (archery *Archery) QpsController(start_qps float64, end_qps float64, qps_st
 //开始测试函数，args参数为传入Work函数的参数，暂时没有使用
 func (archery *Archery) StartLoadTest(start_qps float64, end_qps float64, qps_step float64, duration_time int64,args []string) {
 	archery.succ_response_num_in_one_second = 0
+	archery.total_failed_num = 0
 	archery.total_succ_response_num = 0
 	archery.total_response_time = 0
 	archery.total_request_num = 0
