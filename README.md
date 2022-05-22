@@ -2,7 +2,7 @@
 
 一个golang压测框架，通过代码自定义测试场景，通过web ui指定qps
 
-##效果图展示
+## 效果图展示
 ![image](https://github.com/wangongyouxia/archery/raw/master/static/result.png)
 
 ## 用户指引
