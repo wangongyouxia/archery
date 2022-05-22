@@ -11,16 +11,16 @@ import (
 //用于返回给前端的结构体，执行过程中，每秒更新一次，每收到一个前端的请求，就返回最新的数据
 type OneSecondData struct {
 	Req               int64 `json:"request_num"`
-	Succ_resp         int64 `json:"success_response_num"`
-	Average_cost_time int64 `json:"average_cost_time"`
-	Failed_num        int64 `json:"failed_num"`
-	Time_stamp        int64 `json:"time_stamp"`
-	Min_cost_time int  `json:"min_cost_time"`
-	Fifty_percent_cost_time int `json:"fifty_percent_cost_time"`
-	Ninty_percent_cost_time int `json:"ninty_percent_cost_time"`
-	Ninty_nine_percent_cost_time int `json:"ninty_nine_percent_cost_time"`
-	Max_cost_time int `json:"max_cost_time"`
-	Raw_data []int `json:"raw_data"`
+	SuccResp         int64 `json:"success_response_num"`
+	AverageCostTime int64 `json:"average_cost_time"`
+	FailedNum        int64 `json:"failed_num"`
+	Timestamp        int64 `json:"time_stamp"`
+	MinCostTime int  `json:"min_cost_time"`
+	FiftyPercentCostTime int `json:"fifty_percent_cost_time"`
+	NintyPercentCostTime int `json:"ninty_percent_cost_time"`
+	NintyNinePercentCostTime int `json:"ninty_nine_percent_cost_time"`
+	MaxCostTime int `json:"max_cost_time"`
+	RawData []int `json:"raw_data"`
 }
 
 
@@ -154,12 +154,12 @@ func (archery *Archery) GetSecondData(need_raw bool) OneSecondData {
 	if archery.Status == 1 {
 		res := archery.last_second_data
 		if !need_raw {
-			res.Raw_data = nil
+			res.RawData = nil
 		}
 		return res
 	} else {
 		var zero OneSecondData
-		zero.Time_stamp = int64(time.Now().Unix())
+		zero.Timestamp = int64(time.Now().Unix())
 		return zero
 	}
 }

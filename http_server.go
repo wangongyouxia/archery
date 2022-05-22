@@ -394,10 +394,10 @@ func (ahs *ArcheryHttpServer) getSecondData(w http.ResponseWriter, r *http.Reque
 		for slave := range ahs.Slaves {
 			slave_data, _ := ahs.Slaves[slave].GetSlaveData()
 			req_num_sum += slave_data.OneSecondData.Req
-			succ_resp_sum += slave_data.OneSecondData.Succ_resp
-			failed_num_sum += slave_data.OneSecondData.Failed_num
-			raw_data = append(raw_data,slave_data.OneSecondData.Raw_data...)
-			resp_time_sum += slave_data.OneSecondData.Average_cost_time * slave_data.OneSecondData.Succ_resp
+			succ_resp_sum += slave_data.OneSecondData.SuccResp
+			failed_num_sum += slave_data.OneSecondData.FailedNum
+			raw_data = append(raw_data,slave_data.OneSecondData.RawData...)
+			resp_time_sum += slave_data.OneSecondData.AverageCostTime * slave_data.OneSecondData.SuccResp
 			test_data_sum.TotalReqNum += slave_data.TestDataSum.TotalReqNum
 			test_data_sum.TotalRespNum += slave_data.TestDataSum.TotalRespNum
 			test_data_sum.TotalSuccRespTime += slave_data.TestDataSum.TotalSuccRespTime
