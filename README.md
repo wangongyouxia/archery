@@ -1,6 +1,6 @@
 # Archery
 
-一个golang压测框架，通过代码自定义测试场景，通过web ui指定qps
+一个golang压测框架，通过代码自定义测试场景，通过web ui指定qps，支持分布式部署。
 
 ## 效果图展示
 ![image](https://github.com/wangongyouxia/archery/raw/master/static/result.png)
@@ -27,7 +27,7 @@
 
 (4) 在执行机(slave)执行`./archery -mode slave -master_addr [控制机的机器地址]` 启动执行机(slave)
 
-(5) 如果你要监控目标服务器, 需要把可执行文件archery复制到目标服务器, 然后执行`./archery -mode monitor -master_addr [控制机的机器地址]`启动对目标服务器的监控.
+(5) 如果你要监控目标服务器资源（cpu与内存占用）, 需要把可执行文件archery复制到目标服务器, 然后执行`./archery -mode monitor -master_addr [控制机的机器地址]`启动对目标服务器的监控.
 
 (6) 访问http://[控制机的机器IP]:8018(或你通过-port指定的端口), 管理你的测试任务.
 
