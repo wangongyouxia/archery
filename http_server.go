@@ -13,12 +13,6 @@ import (
 	"time"
 )
 
-type TestDataSum struct {
-	TotalReqNum    int64 `json:"total_request_num"`
-	TotalRespNum   int64 `json:"total_succ_response_num"`
-	TotalSuccRespTime   int64 `json:"total_succ_resp_time"`
-	TotalFailedNum int64 `json:"total_failed_num"`
-}
 
 type TargetServerOneSecondData struct {
 	TimeStampInSec     int `json:"time_stamp"`
@@ -87,11 +81,10 @@ func (ts *TargetServer) ExitTargetServer() bool {
 }
 
 type ServerStatus struct {
-	OneSecondData    OneSecondData             `json:"one_second_data"`
+	OneSecondDataObj    map[string]OneSecondData             `json:"one_second_data_obj"`
 	Status           int                       `json:"server_status"`
 	SlaveNum         int                       `json:"slave_num"`
 	TargetServerData TargetServerOneSecondData `json:"target_server_data"`
-	TestDataSum      TestDataSum               `json:"test_data_sum"`
 }
 
 type TestData struct {
@@ -108,7 +101,8 @@ type SlaveReportData struct {
 type Slave struct {
 	Status         int // 0:Creadted 1:Ready 2:Running 3:Lost 4:Unkown(No report between 1 - 5s)
 	TimeGapInMs    int //master time - slave time
-	LastSecondData OneSecondData
+	//LastSecondDataList []OneSecondData
+	OneSecondDataObj    map[string]OneSecondData             `json:"one_second_data_obj"`
 	Addr         string
 }
 
@@ -202,9 +196,10 @@ type ArcheryHttpServer struct {
 	HttpServerStatus int //0:Stop 1:Running 2:Distribute
 	Distribute       bool
 	Mode           int //0:single 1:master 2:slave
-	Archery             Archery
+	Archeries             map[string]*Archery
 	MonitorServer    bool
 	TargetServer     TargetServer
+	Task             Task
 }
 
 func (ahs *ArcheryHttpServer) VerifySlave(slave Slave) {
@@ -258,7 +253,6 @@ func (ahs *ArcheryHttpServer) SlaveReportExit(w http.ResponseWriter, r *http.Req
 	}
 	w.WriteHeader(200)
 	w.Write([]byte("success"))
-	log.Println("remove slave: ", fmt.Sprintf("%s:%s", strings.Split(r.RemoteAddr, ":")[0], slave_report.Port))
 }
 
 func (ahs *ArcheryHttpServer) TargetServerReportExit(w http.ResponseWriter, r *http.Request) {
@@ -321,7 +315,10 @@ func (ahs *ArcheryHttpServer) StopTestHandler(w http.ResponseWriter, r *http.Req
 		w.WriteHeader(200)
 		w.Write([]byte("success"))
 	} else {
-		ahs.Archery.StopLoadTest()
+		for i,_ := range ahs.Archeries {
+			ahs.Archeries[i].StopLoadTest()
+		}
+		//ahs.Archery.StopLoadTest()
 		ahs.HttpServerStatus = 0
 		w.WriteHeader(200)
 		w.Write([]byte("success"))
@@ -365,7 +362,10 @@ func (ahs *ArcheryHttpServer) StartTestHandler(w http.ResponseWriter, r *http.Re
 		w.Write([]byte("success"))
 	} else {
 		//单机部署处理流程
-		go ahs.Archery.StartLoadTest(0, test_data.TargetQps, test_data.IncreasePerSecond, -1,test_data.Args)
+		//go ahs.Archery.StartLoadTest(0, test_data.TargetQps, test_data.IncreasePerSecond, -1,test_data.Args)
+		for i,archery := range ahs.Archeries {
+			go ahs.Archeries[i].StartLoadTest(0, test_data.TargetQps * archery.ratio, test_data.IncreasePerSecond * archery.ratio, -1,test_data.Args)
+		}
 		ahs.HttpServerStatus = 1
 		w.WriteHeader(200)
 		w.Write([]byte("success"))
@@ -374,14 +374,15 @@ func (ahs *ArcheryHttpServer) StartTestHandler(w http.ResponseWriter, r *http.Re
 
 func (ahs *ArcheryHttpServer) getSecondData(w http.ResponseWriter, r *http.Request) {
 	var target_server_data TargetServerOneSecondData
-	var test_data_sum TestDataSum
 	if ahs.MonitorServer {
 		target_server_data, _ = ahs.TargetServer.GetTargetServerData()
 	}
 	if !ahs.Distribute {
-		one_second_data := ahs.Archery.GetSecondData(ahs.Mode == 2)
-		test_data_sum := ahs.Archery.GetTestDataSum()
-		result_struct := ServerStatus{one_second_data, ahs.HttpServerStatus, 0, target_server_data, test_data_sum}
+		result_struct := ServerStatus{map[string]OneSecondData{}, ahs.HttpServerStatus, 0, target_server_data}
+		for key,_ := range ahs.Archeries {
+			one_second_data := ahs.Archeries[key].GetSecondData(ahs.Mode == 2)
+			result_struct.OneSecondDataObj[key] = one_second_data
+		}
 		json_str, err := json.Marshal(result_struct)
 		if err != nil {
 			fmt.Errorf("Marshal Error %v", err)
@@ -389,35 +390,45 @@ func (ahs *ArcheryHttpServer) getSecondData(w http.ResponseWriter, r *http.Reque
 		//log.Println(string(json_str))
 		w.Write([]byte(string(json_str)))
 	} else {
-		var req_num_sum, succ_resp_sum, failed_num_sum, resp_time_sum int64
-		var raw_data []int
+		var result map[string]OneSecondData
+		result = make(map[string]OneSecondData)
+		var key_list []string
 		for slave := range ahs.Slaves {
 			slave_data, _ := ahs.Slaves[slave].GetSlaveData()
-			req_num_sum += slave_data.OneSecondData.Req
-			succ_resp_sum += slave_data.OneSecondData.SuccResp
-			failed_num_sum += slave_data.OneSecondData.FailedNum
-			raw_data = append(raw_data,slave_data.OneSecondData.RawData...)
-			resp_time_sum += slave_data.OneSecondData.AverageCostTime * slave_data.OneSecondData.SuccResp
-			test_data_sum.TotalReqNum += slave_data.TestDataSum.TotalReqNum
-			test_data_sum.TotalRespNum += slave_data.TestDataSum.TotalRespNum
-			test_data_sum.TotalSuccRespTime += slave_data.TestDataSum.TotalSuccRespTime
-			test_data_sum.TotalFailedNum += slave_data.TestDataSum.TotalFailedNum
-		}
-		var result OneSecondData
-		if succ_resp_sum != 0 {
-			var ninty,ninty_nine,fifty int
-			snapshot_len := len(raw_data)
-			sort.Ints(raw_data)
-			if snapshot_len > 0 {
-				ninty = raw_data[int(float64(snapshot_len) * 0.9)]//[int(float64(snapshot_len) * 0.9)]
-				ninty_nine = raw_data[int(float64(snapshot_len) * 0.99)]
-				fifty = raw_data[snapshot_len/2]
+			for key,_ := range slave_data.OneSecondDataObj {
+				var tmp OneSecondData
+				if _,ok := result[key];ok {
+					tmp = result[key]
+				} else {
+					key_list = append(key_list, key)
+				}
+				tmp.Req += slave_data.OneSecondDataObj[key].Req
+				tmp.SuccResp += slave_data.OneSecondDataObj[key].SuccResp
+				tmp.FailedNum += slave_data.OneSecondDataObj[key].FailedNum
+				tmp.RawData = append(result[key].RawData,slave_data.OneSecondDataObj[key].RawData...)
+				tmp.AverageCostTime += slave_data.OneSecondDataObj[key].AverageCostTime * slave_data.OneSecondDataObj[key].SuccResp
+				tmp.TotalReqNum += slave_data.OneSecondDataObj[key].TotalReqNum
+				tmp.TotalRespNum += slave_data.OneSecondDataObj[key].TotalRespNum
+				tmp.TotalSuccRespTime += slave_data.OneSecondDataObj[key].TotalSuccRespTime
+				tmp.TotalFailedNum += slave_data.OneSecondDataObj[key].TotalFailedNum
+				result[key] = tmp
 			}
-			result = OneSecondData{req_num_sum, succ_resp_sum, resp_time_sum / succ_resp_sum, failed_num_sum, int64(time.Now().Unix()), 0, fifty, ninty, ninty_nine,  0,[]int{}}
-		} else {
-			result = OneSecondData{req_num_sum, succ_resp_sum, 0, failed_num_sum, int64(time.Now().Unix()), 0, 0, 0, 0, 0,[]int{}}
 		}
-		result_struct := ServerStatus{result, ahs.HttpServerStatus, len(ahs.Slaves), target_server_data, test_data_sum}
+		for _,key := range key_list {
+			if result[key].SuccResp != 0 {
+				snapshot_len := len(result[key].RawData)
+				sort.Ints(result[key].RawData)
+				if snapshot_len > 0 {
+					tmp := result[key]
+					tmp.NintyPercentCostTime = result[key].RawData[int(float64(snapshot_len) * 0.9)]//[int(float64(snapshot_len) * 0.9)]
+					tmp.NintyNinePercentCostTime = result[key].RawData[int(float64(snapshot_len) * 0.99)]
+					tmp.FiftyPercentCostTime = result[key].RawData[snapshot_len/2]
+					tmp.AverageCostTime = result[key].AverageCostTime / result[key].SuccResp
+					result[key] = tmp
+				}
+			}
+		}
+		result_struct := ServerStatus{result, ahs.HttpServerStatus, len(ahs.Slaves), target_server_data}
 		json_str, err := json.Marshal(result_struct)
 		if err != nil {
 			fmt.Errorf("Marshal Error %v", err)

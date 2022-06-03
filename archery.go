@@ -20,6 +20,19 @@ type StartFlag struct {
 	master_addr string
 }
 
+func NewArcheryHttpServer() ArcheryHttpServer {
+	var ahs ArcheryHttpServer
+	ahs.Archeries = make(map[string](*Archery))
+	work_list := ahs.Task.LoadWorkList()
+	for _,work := range work_list {
+		var archery Archery
+		archery.work = work.WorkFunc
+		archery.ratio = work.Ratio
+		ahs.Archeries[work.Title] = &archery
+	}
+	return ahs
+}
+
 func SlaveExitHandler(master_addr string, json_str string) {
 	c := make(chan os.Signal, 2)
 	signal.Notify(c, os.Interrupt, os.Kill)
@@ -78,7 +91,7 @@ func SingleExitHandler(ahs *ArcheryHttpServer){
 
 //单机部署函数，绑定函数，注册信号处理函数
 func StartSingle(port int) {
-	var ahs ArcheryHttpServer
+	ahs := NewArcheryHttpServer()
 	http.HandleFunc("/", IndexHandler)
 	http.HandleFunc("/get_second_data", ahs.getSecondData)
 	http.HandleFunc("/slave_report", ahs.SlaveReport)
@@ -133,7 +146,7 @@ func StartMonitor(master_addr string) {
 
 //启动分布式部署的master
 func StartMaster(port int) {
-	var ahs ArcheryHttpServer
+	ahs := NewArcheryHttpServer()
 	ahs.Distribute = true
 	http.HandleFunc("/", IndexHandler) //返回前端页面
 	http.HandleFunc("/get_second_data", ahs.getSecondData) //获取每秒数据，会同步请求每个slave，并汇总返回
@@ -182,7 +195,7 @@ func StartSlave(master_addr string) {
 	body, _ := ioutil.ReadAll(resp.Body)
 	log.Println(string(body))
 	resp.Body.Close()
-	var ahs ArcheryHttpServer
+	ahs := NewArcheryHttpServer()
 	ahs.Mode = 2
 	var httpd http.Server
 	http.HandleFunc("/get_second_data", ahs.getSecondData) //获取每秒数据函数

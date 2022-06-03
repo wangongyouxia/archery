@@ -6,6 +6,10 @@ h2 {
 	float:none;
 
 }
-.zhizhen:hover {
+.nav-item:hover {
 	cursor:pointer;
 }
+
+/* .nav {
+	background-color: "";
+} */

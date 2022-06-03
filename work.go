@@ -8,6 +8,12 @@ import (
 	"time"
 )
 
+type WorkInfo struct {
+	WorkFunc   func() (bool,int)
+	Ratio  float64
+	Title      string
+}
+
 type Task struct {
 	/*任务结构体，因部分测试场景需要共享数据，故使用此结构体避免全局变量的使用，如本demo的场景使用了同一个client实例
 	Task struct, which is used for sharing data within different testcases. In this example, all testcases use the same instance
@@ -21,7 +27,7 @@ func (task *Task)Init() {
 	task.client = http.Client{ Timeout : time.Second }
 }
 
-func (task *Task)Work(args ...interface{}) (bool, int) {
+func (task *Task) Work() (bool, int) {
 	/*此函数为压测具体事项，如下为GET github首页的示例
 	this is an example for requesting github webpage with GET method
 	*/
@@ -54,3 +60,8 @@ func (task *Task)Uninit() {
 	*/
 }
 
+func (task *Task)LoadWorkList() []WorkInfo {
+	var res []WorkInfo
+	res = append(res,WorkInfo{task.Work,1,"github"})
+	return res
+}

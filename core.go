@@ -21,6 +21,10 @@ type OneSecondData struct {
 	NintyNinePercentCostTime int `json:"ninty_nine_percent_cost_time"`
 	MaxCostTime int `json:"max_cost_time"`
 	RawData []int `json:"raw_data"`
+	TotalReqNum    int64 `json:"total_request_num"`
+	TotalRespNum   int64 `json:"total_succ_response_num"`
+	TotalSuccRespTime   int64 `json:"total_succ_resp_time"`
+	TotalFailedNum int64 `json:"total_failed_num"`
 }
 
 
@@ -40,7 +44,10 @@ type Archery struct {
 	Last_second_whole_test_data     []int
 	slice_lock                      sync.Mutex
 	cpu_num                         int
-	task				Task
+	work                            func()(bool,int)
+	description                     string
+	ratio                           float64
+	task                            *Task
 }
 
 
@@ -52,13 +59,18 @@ func (archery *Archery) StopLoadTest() {
 	atomic.StoreInt64(&(archery.succ_response_num_in_one_second), 0)
 	atomic.StoreInt64(&(archery.total_resp_time_in_one_second), 0)
 	atomic.StoreInt64(&(archery.failed_num_in_one_second), 0)
-	archery.last_second_data = OneSecondData{}
-	archery.task.Uninit()
+	tmp := OneSecondData{}
+	tmp.TotalReqNum   = archery.last_second_data.TotalReqNum //  int64 `json:"total_request_num"`
+    tmp.TotalRespNum = archery.last_second_data.TotalRespNum //  int64 `json:"total_succ_response_num"`
+    tmp.TotalSuccRespTime = archery.last_second_data.TotalSuccRespTime //  int64 `json:"total_succ_resp_time"`
+    tmp.TotalFailedNum = archery.last_second_data.TotalFailedNum
+	archery.last_second_data = tmp
+
 }
 
 //执行单个压测动作函数，并把执行结果统计到当前秒的数据中
 func (archery *Archery) RunSingleJob(args []string) {
-	succ, cost_time := archery.task.Work(args)
+	succ, cost_time := archery.work()
 	if archery.Status != 1 {
 		return
 	}
@@ -128,7 +140,7 @@ func (archery *Archery) Controller() {
 		//fmt.Printf("total req:%d, total resp:%d, req/s:%d, resp/s:%d, average_resp_time:%d\n", archery.total_request_num, archery.total_succ_response_num, archery.request_num_in_one_second, archery.succ_response_num_in_one_second, average_resp_time)
 		now := int64(time.Now().Unix())
 		min_value,fifty,ninty,ninty_nine,max_value := archery.getLastSecondPercentData()
-		archery.last_second_data = OneSecondData{archery.request_num_in_one_second, archery.succ_response_num_in_one_second, average_resp_time, archery.failed_num_in_one_second, now, min_value,fifty,ninty,ninty_nine,max_value,archery.Last_second_whole_test_data}
+		archery.last_second_data = OneSecondData{archery.request_num_in_one_second, archery.succ_response_num_in_one_second, average_resp_time, archery.failed_num_in_one_second, now, min_value,fifty,ninty,ninty_nine,max_value,archery.Last_second_whole_test_data,archery.total_request_num,archery.total_succ_response_num,archery.total_response_time,archery.total_failed_num}
 		archery.slice_lock.Lock()
 		archery.Last_second_whole_test_data = nil
 		archery.slice_lock.Unlock()
@@ -139,29 +151,14 @@ func (archery *Archery) Controller() {
 	}
 }
 
-//汇总数据，其中汇总数据不会在Controller()函数中被清零，停止并开始新的压测任务也不会清零，只有重启程序才会清零
-func (archery *Archery) GetTestDataSum() TestDataSum {
-	var test_data_sum TestDataSum
-	test_data_sum.TotalReqNum = archery.total_request_num
-	test_data_sum.TotalRespNum = archery.total_succ_response_num
-	test_data_sum.TotalSuccRespTime = archery.total_response_time
-	test_data_sum.TotalFailedNum = archery.total_failed_num
-	return test_data_sum
-}
 
 //返回上一秒数据
 func (archery *Archery) GetSecondData(need_raw bool) OneSecondData {
-	if archery.Status == 1 {
-		res := archery.last_second_data
-		if !need_raw {
-			res.RawData = nil
-		}
-		return res
-	} else {
-		var zero OneSecondData
-		zero.Timestamp = int64(time.Now().Unix())
-		return zero
+	res := archery.last_second_data
+	if !need_raw {
+		res.RawData = nil
 	}
+	return res
 }
 
 //定时停止测试，暂时没用
@@ -190,6 +187,7 @@ func (archery *Archery) QpsController(start_qps float64, end_qps float64, qps_st
 
 //开始测试函数，args参数为传入Work函数的参数，暂时没有使用
 func (archery *Archery) StartLoadTest(start_qps float64, end_qps float64, qps_step float64, duration_time int64,args []string) {
+	archery.last_second_data = OneSecondData{}
 	archery.succ_response_num_in_one_second = 0
 	archery.total_failed_num = 0
 	archery.total_succ_response_num = 0
@@ -213,7 +211,6 @@ func (archery *Archery) StartLoadTest(start_qps float64, end_qps float64, qps_st
 	archery.sleep_time_in_microsecond = int64(float64(1000000) / qps)
 	go archery.QpsController(start_qps, end_qps, qps_step, &qps, &wg, args)
 	go archery.Controller()
-	archery.task.Init()
 	wg.Add(1)
 	go archery.RunJobs(qps, &wg,args)
 	wg.Wait()
