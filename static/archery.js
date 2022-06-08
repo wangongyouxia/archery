@@ -19,6 +19,13 @@ window.onload = function(){
 		slave_num: -1,
 	},
 	methods: {
+		getMappingValueArrayOfKey(map,keyName){
+			sum = 0
+			for (var key in map) {
+				sum += map[key][keyName]
+			}
+			return sum
+		},
 		show_start(){
 			this.active_nav_tab = 'start';
 			console.log(this.active_nav_tab)
@@ -113,7 +120,7 @@ window.onload = function(){
 					if(Object.keys(response.data.one_second_data_obj).length == 1){
 						this.status_string = "Running: " + response.data['one_second_data_obj'][Object.keys(response.data['one_second_data_obj'])[0]]['request_num'] + " requests/sec"
 					} else {
-						this.status_string = "Running: " + Object.keys(response.data.one_second_data_obj).length + " work"
+						this.status_string = "Running: " + Object.keys(response.data.one_second_data_obj).length + " work " + this.getMappingValueArrayOfKey(response.data.one_second_data_obj, 'request_num') + " requests/sec"
 					}
 					this.data_series[key].req_num_sum = response.data['one_second_data_obj'][key]['total_request_num']
 					this.data_series[key].succ_resp_num_sum = response.data['one_second_data_obj'][key]['total_succ_response_num']

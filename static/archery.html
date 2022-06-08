@@ -76,7 +76,7 @@
 			<div class="row clearfix">
 				<div class="col-md-12 column" v-show="active_nav_tab == 'chart'" style="text-align:center">
 					<div v-for="(v,k,i) in data_series" class="juzhong">
-						<div v-bind:id="k" style="width: 1000px;height:400px;" ></div>
+						<div v-bind:id="k" style="width: 1200px;height:400px;" ></div>
 					</div>
 					<div id="chart_server" style="width: 1000px;height:375px;" class="juzhong" v-show="monitor"></div>
 					<button type="button" @click="stop_test()" class="btn btn-info juzhong">Stop</button>
