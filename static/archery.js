@@ -39,11 +39,12 @@ window.onload = function(){
 		stop_test(){
 			axios.post("stop","stop").then(() => {
 				setTimeout(() => {
+					console.log(this.chart_controller)
 					clearInterval(this.chart_controller);
+					this.status_string = 'stop';
 					this.active_nav_tab = 'start';
 					this.archery_status = 0
 				},1000);
-			
 			});
 		},
 		start_test(){
@@ -55,7 +56,7 @@ window.onload = function(){
 				this.archery_status = 1;
 				this.chart_controller = setInterval(this.get_test_data, 1000);
 				this.show_chart();
-			
+				console.log(this.chart_controller)
 		})
 		},
 		get_test_data(){
@@ -81,6 +82,7 @@ window.onload = function(){
 						xAxis:{
 							data:this.data_series[key].date_string
 						},
+						
 						series:[{
 								name:'请求数',
 								data:this.data_series[key].req_num
@@ -120,7 +122,7 @@ window.onload = function(){
 					if(Object.keys(response.data.one_second_data_obj).length == 1){
 						this.status_string = "Running: " + response.data['one_second_data_obj'][Object.keys(response.data['one_second_data_obj'])[0]]['request_num'] + " requests/sec"
 					} else {
-						this.status_string = "Running: " + Object.keys(response.data.one_second_data_obj).length + " work " + this.getMappingValueArrayOfKey(response.data.one_second_data_obj, 'request_num') + " requests/sec"
+						this.status_string = Object.keys(response.data.one_second_data_obj).length + " Work " + "Running: " + this.getMappingValueArrayOfKey(response.data.one_second_data_obj, 'request_num') + " requests/sec"
 					}
 					this.data_series[key].req_num_sum = response.data['one_second_data_obj'][key]['total_request_num']
 					this.data_series[key].succ_resp_num_sum = response.data['one_second_data_obj'][key]['total_succ_response_num']
@@ -191,6 +193,26 @@ window.onload = function(){
 					top: "10%",
 					data:['请求数','成功响应数','失败数','平均响应延时','99%响应延时','90%响应延时','响应延时中位数']
 				},
+				toolbox: {
+					show: true,
+					orient: 'vertical',
+					top: 10,
+					right: "5%",
+					feature: {
+						saveAsImage: {
+							show: true,
+							type:'jpg',
+							name: id,
+							title:'保存为图片',
+						},
+						dataView: {
+							show: true,
+							title: '数据视图',
+							readOnly: false,
+						}
+					},
+					
+				},
 				xAxis:{
 					boundaryGap: false,
 					data:[]
@@ -205,6 +227,7 @@ window.onload = function(){
 						type: "value"
 					}
 				],
+				
 			series:[{
 				name:'请求数',
 				type:'line',
