@@ -1,32 +1,32 @@
 package main
 
 import (
+	"math/rand"
 	"runtime"
+	"sort"
 	"sync"
 	"sync/atomic"
 	"time"
-	"sort"
 )
 
 //用于返回给前端的结构体，执行过程中，每秒更新一次，每收到一个前端的请求，就返回最新的数据
 type OneSecondData struct {
-	Req               int64 `json:"request_num"`
-	SuccResp         int64 `json:"success_response_num"`
-	AverageCostTime int64 `json:"average_cost_time"`
-	FailedNum        int64 `json:"failed_num"`
-	Timestamp        int64 `json:"time_stamp"`
-	MinCostTime int  `json:"min_cost_time"`
-	FiftyPercentCostTime int `json:"fifty_percent_cost_time"`
-	NintyPercentCostTime int `json:"ninty_percent_cost_time"`
-	NintyNinePercentCostTime int `json:"ninty_nine_percent_cost_time"`
-	MaxCostTime int `json:"max_cost_time"`
-	RawData []int `json:"raw_data"`
-	TotalReqNum    int64 `json:"total_request_num"`
-	TotalRespNum   int64 `json:"total_succ_response_num"`
-	TotalSuccRespTime   int64 `json:"total_succ_resp_time"`
-	TotalFailedNum int64 `json:"total_failed_num"`
+	Req                      int64 `json:"request_num"`
+	SuccResp                 int64 `json:"success_response_num"`
+	AverageCostTime          int64 `json:"average_cost_time"`
+	FailedNum                int64 `json:"failed_num"`
+	Timestamp                int64 `json:"time_stamp"`
+	MinCostTime              int   `json:"min_cost_time"`
+	FiftyPercentCostTime     int   `json:"fifty_percent_cost_time"`
+	NintyPercentCostTime     int   `json:"ninty_percent_cost_time"`
+	NintyNinePercentCostTime int   `json:"ninty_nine_percent_cost_time"`
+	MaxCostTime              int   `json:"max_cost_time"`
+	RawData                  []int `json:"raw_data"`
+	TotalReqNum              int64 `json:"total_request_num"`
+	TotalRespNum             int64 `json:"total_succ_response_num"`
+	TotalSuccRespTime        int64 `json:"total_succ_resp_time"`
+	TotalFailedNum           int64 `json:"total_failed_num"`
 }
-
 
 //Archery结构体，用于存储压测执行过程中需要的各个数据
 type Archery struct {
@@ -44,13 +44,11 @@ type Archery struct {
 	Last_second_whole_test_data     []int
 	slice_lock                      sync.Mutex
 	cpu_num                         int
-	work                            func()(bool,int)
+	work                            func() (bool, int)
 	description                     string
 	ratio                           float64
 	task                            *Task
 }
-
-
 
 //停止执行压测函数
 func (archery *Archery) StopLoadTest() {
@@ -60,10 +58,10 @@ func (archery *Archery) StopLoadTest() {
 	atomic.StoreInt64(&(archery.total_resp_time_in_one_second), 0)
 	atomic.StoreInt64(&(archery.failed_num_in_one_second), 0)
 	tmp := OneSecondData{}
-	tmp.TotalReqNum   = archery.last_second_data.TotalReqNum //  int64 `json:"total_request_num"`
-    tmp.TotalRespNum = archery.last_second_data.TotalRespNum //  int64 `json:"total_succ_response_num"`
-    tmp.TotalSuccRespTime = archery.last_second_data.TotalSuccRespTime //  int64 `json:"total_succ_resp_time"`
-    tmp.TotalFailedNum = archery.last_second_data.TotalFailedNum
+	tmp.TotalReqNum = archery.last_second_data.TotalReqNum             //  int64 `json:"total_request_num"`
+	tmp.TotalRespNum = archery.last_second_data.TotalRespNum           //  int64 `json:"total_succ_response_num"`
+	tmp.TotalSuccRespTime = archery.last_second_data.TotalSuccRespTime //  int64 `json:"total_succ_resp_time"`
+	tmp.TotalFailedNum = archery.last_second_data.TotalFailedNum
 	archery.last_second_data = tmp
 
 }
@@ -76,7 +74,7 @@ func (archery *Archery) RunSingleJob(args []string) {
 	}
 	if succ {
 		archery.slice_lock.Lock()
-		archery.Last_second_whole_test_data = append(archery.Last_second_whole_test_data,int(cost_time))
+		archery.Last_second_whole_test_data = append(archery.Last_second_whole_test_data, int(cost_time))
 		archery.slice_lock.Unlock()
 		atomic.AddInt64(&(archery.succ_response_num_in_one_second), 1)
 		atomic.AddInt64(&(archery.total_succ_response_num), 1)
@@ -89,7 +87,7 @@ func (archery *Archery) RunSingleJob(args []string) {
 }
 
 //根据计算得出的时间间隔，循环等待延时并调用压测动作函数
-func (archery *Archery) RunJobs(qps float64, wg *sync.WaitGroup,args []string) {
+func (archery *Archery) RunJobs(qps float64, wg *sync.WaitGroup, args []string) {
 	for archery.Status == 1 {
 		time.Sleep(time.Duration(archery.sleep_time_in_microsecond) * time.Microsecond)
 		atomic.AddInt64(&(archery.request_num_in_one_second), 1)
@@ -112,19 +110,19 @@ func (archery *Archery) DelayTimeAdjust(qps float64) {
 	}
 }
 
-func (archery *Archery) getLastSecondPercentData() (int,int,int,int,int) {
-	var min_value,fifty,ninty,ninty_nine,max_value int
+func (archery *Archery) getLastSecondPercentData() (int, int, int, int, int) {
+	var min_value, fifty, ninty, ninty_nine, max_value int
 	snapshot_list := archery.Last_second_whole_test_data
 	snapshot_len := len(archery.Last_second_whole_test_data)
 	sort.Ints(snapshot_list)
 	if snapshot_len > 0 {
 		//min_value = archery.Last_second_whole_test_data[0]
 		//max_value = archery.Last_second_whole_test_data[snapshot_len-1]
-		ninty = snapshot_list[int(float64(snapshot_len) * 0.9)]//[int(float64(snapshot_len) * 0.9)]
-		ninty_nine = snapshot_list[int(float64(snapshot_len) * 0.99)]
-		fifty = snapshot_list[snapshot_len/2]
+		ninty = findKthSmallest(snapshot_list, int(float64(snapshot_len)*0.9)) //[int(float64(snapshot_len) * 0.9)]
+		ninty_nine = findKthSmallest(snapshot_list, int(float64(snapshot_len)*0.99))
+		fifty = findKthSmallest(snapshot_list, snapshot_len/2)
 	}
-	return min_value,fifty,ninty,ninty_nine,max_value
+	return min_value, fifty, ninty, ninty_nine, max_value
 }
 
 //统计上一秒数据放到OneSecondData中等待前端来取，并清零数据开始下一秒统计
@@ -139,8 +137,8 @@ func (archery *Archery) Controller() {
 		}
 		//fmt.Printf("total req:%d, total resp:%d, req/s:%d, resp/s:%d, average_resp_time:%d\n", archery.total_request_num, archery.total_succ_response_num, archery.request_num_in_one_second, archery.succ_response_num_in_one_second, average_resp_time)
 		now := int64(time.Now().Unix())
-		min_value,fifty,ninty,ninty_nine,max_value := archery.getLastSecondPercentData()
-		archery.last_second_data = OneSecondData{archery.request_num_in_one_second, archery.succ_response_num_in_one_second, average_resp_time, archery.failed_num_in_one_second, now, min_value,fifty,ninty,ninty_nine,max_value,archery.Last_second_whole_test_data,archery.total_request_num,archery.total_succ_response_num,archery.total_response_time,archery.total_failed_num}
+		min_value, fifty, ninty, ninty_nine, max_value := archery.getLastSecondPercentData()
+		archery.last_second_data = OneSecondData{archery.request_num_in_one_second, archery.succ_response_num_in_one_second, average_resp_time, archery.failed_num_in_one_second, now, min_value, fifty, ninty, ninty_nine, max_value, archery.Last_second_whole_test_data, archery.total_request_num, archery.total_succ_response_num, archery.total_response_time, archery.total_failed_num}
 		archery.slice_lock.Lock()
 		archery.Last_second_whole_test_data = nil
 		archery.slice_lock.Unlock()
@@ -150,7 +148,6 @@ func (archery *Archery) Controller() {
 		atomic.StoreInt64(&(archery.failed_num_in_one_second), 0)
 	}
 }
-
 
 //返回上一秒数据
 func (archery *Archery) GetSecondData(need_raw bool) OneSecondData {
@@ -168,16 +165,16 @@ func (archery *Archery) StopInTime(duration_time int64) {
 }
 
 //控制qps的函数，根据qps每秒增加数，计算出当前秒目标qps，并根据这个目标qps，算出需要等待的延时时间
-func (archery *Archery) QpsController(start_qps float64, end_qps float64, qps_step float64, qps *float64,wg *sync.WaitGroup,args []string) {
+func (archery *Archery) QpsController(start_qps float64, end_qps float64, qps_step float64, qps *float64, wg *sync.WaitGroup, args []string) {
 	for archery.Status == 1 && *qps < end_qps {
 		time.Sleep(time.Duration(1) * time.Second)
 		*qps = *qps + qps_step
 		//当预期qps达到逻辑cpu数50倍的时候，启动多个协程（数量和逻辑cpu数一致），同时起执行job，以最大化利用cpu性能。
-		if runtime.NumCPU() * 50 < int(*qps) && archery.cpu_num == 1{
+		if runtime.NumCPU()*50 < int(*qps) && archery.cpu_num == 1 {
 			archery.cpu_num = runtime.NumCPU()
 			for t := 1; t < archery.cpu_num; t++ {
 				wg.Add(1)
-				go archery.RunJobs(*qps,wg,args)
+				go archery.RunJobs(*qps, wg, args)
 			}
 		}
 		archery.sleep_time_in_microsecond = int64(float64(1000000) * float64(archery.cpu_num) / *qps)
@@ -186,7 +183,7 @@ func (archery *Archery) QpsController(start_qps float64, end_qps float64, qps_st
 }
 
 //开始测试函数，args参数为传入Work函数的参数，暂时没有使用
-func (archery *Archery) StartLoadTest(start_qps float64, end_qps float64, qps_step float64, duration_time int64,args []string) {
+func (archery *Archery) StartLoadTest(start_qps float64, end_qps float64, qps_step float64, duration_time int64, args []string) {
 	archery.last_second_data = OneSecondData{}
 	archery.succ_response_num_in_one_second = 0
 	archery.total_failed_num = 0
@@ -212,7 +209,41 @@ func (archery *Archery) StartLoadTest(start_qps float64, end_qps float64, qps_st
 	go archery.QpsController(start_qps, end_qps, qps_step, &qps, &wg, args)
 	go archery.Controller()
 	wg.Add(1)
-	go archery.RunJobs(qps, &wg,args)
+	go archery.RunJobs(qps, &wg, args)
 	wg.Wait()
 	return
+}
+
+func quickSelect(a []int, l, r, index int) int {
+	q := randomPartition(a, l, r)
+	if q == index {
+		return a[q]
+	} else if q < index {
+		return quickSelect(a, q+1, r, index)
+	}
+	return quickSelect(a, l, q-1, index)
+}
+
+func randomPartition(a []int, l, r int) int {
+	i := rand.Int()%(r-l+1) + l
+	a[i], a[r] = a[r], a[i]
+	return partition(a, l, r)
+}
+
+func partition(a []int, l, r int) int {
+	x := a[r]
+	i := l - 1
+	for j := l; j < r; j++ {
+		if a[j] <= x {
+			i++
+			a[i], a[j] = a[j], a[i]
+		}
+	}
+	a[i+1], a[r] = a[r], a[i+1]
+	return i + 1
+}
+
+func findKthSmallest(nums []int, k int) int {
+	rand.Seed(time.Now().UnixNano())
+	return quickSelect(nums, 0, len(nums)-1, k)
 }
