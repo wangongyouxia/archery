@@ -4,15 +4,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"sort"
 	"log"
 	"net/http"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
 )
-
 
 type TargetServerOneSecondData struct {
 	TimeStampInSec     int `json:"time_stamp"`
@@ -81,32 +80,32 @@ func (ts *TargetServer) ExitTargetServer() bool {
 }
 
 type ServerStatus struct {
-	OneSecondDataObj    map[string]OneSecondData             `json:"one_second_data_obj"`
+	OneSecondDataObj map[string]OneSecondData  `json:"one_second_data_obj"`
 	Status           int                       `json:"server_status"`
 	SlaveNum         int                       `json:"slave_num"`
 	TargetServerData TargetServerOneSecondData `json:"target_server_data"`
 }
 
 type TestData struct {
-	TargetQps         float64 `json:"target-qps"`
-	IncreasePerSecond float64 `json:"increase-per-second"`
-	Args		  []string `json:"args"`
+	TargetQps         float64  `json:"target-qps"`
+	IncreasePerSecond float64  `json:"increase-per-second"`
+	Args              []string `json:"args"`
 }
 
 type SlaveReportData struct {
-	Port          int    `json:"port"`
-	TimeStampInMs int64  `json:"time_stamp"`
+	Port          int   `json:"port"`
+	TimeStampInMs int64 `json:"time_stamp"`
 }
 
 type Slave struct {
-	Status         int // 0:Creadted 1:Ready 2:Running 3:Lost 4:Unkown(No report between 1 - 5s)
-	TimeGapInMs    int //master time - slave time
+	Status      int // 0:Creadted 1:Ready 2:Running 3:Lost 4:Unkown(No report between 1 - 5s)
+	TimeGapInMs int //master time - slave time
 	//LastSecondDataList []OneSecondData
-	OneSecondDataObj    map[string]OneSecondData             `json:"one_second_data_obj"`
-	Addr         string
+	OneSecondDataObj map[string]OneSecondData `json:"one_second_data_obj"`
+	Addr             string
 }
 
-func (s *Slave) StartTest(target_qps float64, increase_step float64,args []string) bool {
+func (s *Slave) StartTest(target_qps float64, increase_step float64, args []string) bool {
 	var test_data TestData
 	test_data.TargetQps = target_qps
 	test_data.IncreasePerSecond = increase_step
@@ -195,8 +194,8 @@ type ArcheryHttpServer struct {
 	Slaves           []Slave
 	HttpServerStatus int //0:Stop 1:Running 2:Distribute
 	Distribute       bool
-	Mode           int //0:single 1:master 2:slave
-	Archeries             map[string]*Archery
+	Mode             int //0:single 1:master 2:slave
+	Archeries        map[string]*Archery
 	MonitorServer    bool
 	TargetServer     TargetServer
 	Task             Task
@@ -315,7 +314,7 @@ func (ahs *ArcheryHttpServer) StopTestHandler(w http.ResponseWriter, r *http.Req
 		w.WriteHeader(200)
 		w.Write([]byte("success"))
 	} else {
-		for i,_ := range ahs.Archeries {
+		for i, _ := range ahs.Archeries {
 			ahs.Archeries[i].StopLoadTest()
 		}
 		//ahs.Archery.StopLoadTest()
@@ -355,7 +354,7 @@ func (ahs *ArcheryHttpServer) StartTestHandler(w http.ResponseWriter, r *http.Re
 		//			}
 		//		}
 		for slave := range ahs.Slaves {
-			ahs.Slaves[slave].StartTest(target, step,test_data.Args)
+			ahs.Slaves[slave].StartTest(target, step, test_data.Args)
 		}
 		ahs.HttpServerStatus = 1
 		w.WriteHeader(200)
@@ -363,8 +362,8 @@ func (ahs *ArcheryHttpServer) StartTestHandler(w http.ResponseWriter, r *http.Re
 	} else {
 		//单机部署处理流程
 		//go ahs.Archery.StartLoadTest(0, test_data.TargetQps, test_data.IncreasePerSecond, -1,test_data.Args)
-		for i,archery := range ahs.Archeries {
-			go ahs.Archeries[i].StartLoadTest(0, test_data.TargetQps * archery.ratio, test_data.IncreasePerSecond * archery.ratio, -1,test_data.Args)
+		for i, archery := range ahs.Archeries {
+			go ahs.Archeries[i].StartLoadTest(0, test_data.TargetQps*archery.ratio, test_data.IncreasePerSecond*archery.ratio, -1, test_data.Args)
 		}
 		ahs.HttpServerStatus = 1
 		w.WriteHeader(200)
@@ -379,7 +378,7 @@ func (ahs *ArcheryHttpServer) getSecondData(w http.ResponseWriter, r *http.Reque
 	}
 	if !ahs.Distribute {
 		result_struct := ServerStatus{map[string]OneSecondData{}, ahs.HttpServerStatus, 0, target_server_data}
-		for key,_ := range ahs.Archeries {
+		for key, _ := range ahs.Archeries {
 			one_second_data := ahs.Archeries[key].GetSecondData(ahs.Mode == 2)
 			result_struct.OneSecondDataObj[key] = one_second_data
 		}
@@ -395,9 +394,9 @@ func (ahs *ArcheryHttpServer) getSecondData(w http.ResponseWriter, r *http.Reque
 		var key_list []string
 		for slave := range ahs.Slaves {
 			slave_data, _ := ahs.Slaves[slave].GetSlaveData()
-			for key,_ := range slave_data.OneSecondDataObj {
+			for key, _ := range slave_data.OneSecondDataObj {
 				var tmp OneSecondData
-				if _,ok := result[key];ok {
+				if _, ok := result[key]; ok {
 					tmp = result[key]
 				} else {
 					key_list = append(key_list, key)
@@ -405,23 +404,24 @@ func (ahs *ArcheryHttpServer) getSecondData(w http.ResponseWriter, r *http.Reque
 				tmp.Req += slave_data.OneSecondDataObj[key].Req
 				tmp.SuccResp += slave_data.OneSecondDataObj[key].SuccResp
 				tmp.FailedNum += slave_data.OneSecondDataObj[key].FailedNum
-				tmp.RawData = append(result[key].RawData,slave_data.OneSecondDataObj[key].RawData...)
+				tmp.RawData = append(result[key].RawData, slave_data.OneSecondDataObj[key].RawData...)
 				tmp.AverageCostTime += slave_data.OneSecondDataObj[key].AverageCostTime * slave_data.OneSecondDataObj[key].SuccResp
 				tmp.TotalReqNum += slave_data.OneSecondDataObj[key].TotalReqNum
 				tmp.TotalRespNum += slave_data.OneSecondDataObj[key].TotalRespNum
 				tmp.TotalSuccRespTime += slave_data.OneSecondDataObj[key].TotalSuccRespTime
 				tmp.TotalFailedNum += slave_data.OneSecondDataObj[key].TotalFailedNum
+				tmp.Timestamp = slave_data.OneSecondDataObj[key].Timestamp
 				result[key] = tmp
 			}
 		}
-		for _,key := range key_list {
+		for _, key := range key_list {
 			if result[key].SuccResp != 0 {
 				snapshot_len := len(result[key].RawData)
 				sort.Ints(result[key].RawData)
 				if snapshot_len > 0 {
 					tmp := result[key]
-					tmp.NintyPercentCostTime = result[key].RawData[int(float64(snapshot_len) * 0.9)]//[int(float64(snapshot_len) * 0.9)]
-					tmp.NintyNinePercentCostTime = result[key].RawData[int(float64(snapshot_len) * 0.99)]
+					tmp.NintyPercentCostTime = result[key].RawData[int(float64(snapshot_len)*0.9)] //[int(float64(snapshot_len) * 0.9)]
+					tmp.NintyNinePercentCostTime = result[key].RawData[int(float64(snapshot_len)*0.99)]
 					tmp.FiftyPercentCostTime = result[key].RawData[snapshot_len/2]
 					tmp.AverageCostTime = result[key].AverageCostTime / result[key].SuccResp
 					result[key] = tmp
@@ -482,12 +482,12 @@ func (ahs *ArcheryHttpServer) GetTargetServerData(w http.ResponseWriter, r *http
 	idle_cpu, _ := strconv.Atoi(cpu_info[4])
 	mem_info := strings.Split(string(mem_data), "\n")
 	mem_line := make(map[string]int)
-	for _,line := range mem_info {
+	for _, line := range mem_info {
 		if line == "" {
 			break
 		}
 		line_data := strings.Fields(line)
-		mem_line[line_data[0]],_ = strconv.Atoi(line_data[1])
+		mem_line[line_data[0]], _ = strconv.Atoi(line_data[1])
 	}
 	total_mem := mem_line["MemTotal:"]
 	var avai_mem int
