@@ -3,7 +3,8 @@ package main
 import (
 	"math/rand"
 	"runtime"
-	"sort"
+
+	//"sort"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -114,7 +115,7 @@ func (archery *Archery) getLastSecondPercentData() (int, int, int, int, int) {
 	var min_value, fifty, ninty, ninty_nine, max_value int
 	snapshot_list := archery.Last_second_whole_test_data
 	snapshot_len := len(archery.Last_second_whole_test_data)
-	sort.Ints(snapshot_list)
+	//sort.Ints(snapshot_list)
 	if snapshot_len > 0 {
 		//min_value = archery.Last_second_whole_test_data[0]
 		//max_value = archery.Last_second_whole_test_data[snapshot_len-1]

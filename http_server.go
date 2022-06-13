@@ -7,7 +7,8 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"sort"
+
+	// "sort"
 	"strconv"
 	"strings"
 	"time"
@@ -417,12 +418,12 @@ func (ahs *ArcheryHttpServer) getSecondData(w http.ResponseWriter, r *http.Reque
 		for _, key := range key_list {
 			if result[key].SuccResp != 0 {
 				snapshot_len := len(result[key].RawData)
-				sort.Ints(result[key].RawData)
+				//sort.Ints(result[key].RawData)
 				if snapshot_len > 0 {
 					tmp := result[key]
-					tmp.NintyPercentCostTime = result[key].RawData[int(float64(snapshot_len)*0.9)] //[int(float64(snapshot_len) * 0.9)]
-					tmp.NintyNinePercentCostTime = result[key].RawData[int(float64(snapshot_len)*0.99)]
-					tmp.FiftyPercentCostTime = result[key].RawData[snapshot_len/2]
+					tmp.NintyPercentCostTime = findKthSmallest(result[key].RawData, int(float64(snapshot_len)*0.9)) //[int(float64(snapshot_len) * 0.9)]
+					tmp.NintyNinePercentCostTime = findKthSmallest(result[key].RawData, int(float64(snapshot_len)*0.99))
+					tmp.FiftyPercentCostTime = findKthSmallest(result[key].RawData, snapshot_len/2)
 					tmp.AverageCostTime = result[key].AverageCostTime / result[key].SuccResp
 					result[key] = tmp
 				}
