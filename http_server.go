@@ -363,7 +363,12 @@ func (ahs *ArcheryHttpServer) StartTestHandler(w http.ResponseWriter, r *http.Re
 	} else {
 		//单机部署处理流程
 		//go ahs.Archery.StartLoadTest(0, test_data.TargetQps, test_data.IncreasePerSecond, -1,test_data.Args)
+		times := 0
 		for i, archery := range ahs.Archeries {
+			if (times==0) {
+				ahs.Archeries[i].task.Init()
+				times += 1
+			}
 			go ahs.Archeries[i].StartLoadTest(0, test_data.TargetQps*archery.ratio, test_data.IncreasePerSecond*archery.ratio, -1, test_data.Args)
 		}
 		ahs.HttpServerStatus = 1

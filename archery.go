@@ -23,11 +23,12 @@ type StartFlag struct {
 func NewArcheryHttpServer() ArcheryHttpServer {
 	var ahs ArcheryHttpServer
 	ahs.Archeries = make(map[string](*Archery))
-	work_list := ahs.Task.LoadWorkList()
+	work_list,task := ahs.Task.LoadWorkList()
 	for _, work := range work_list {
 		var archery Archery
 		archery.work = work.WorkFunc
 		archery.ratio = work.Ratio
+		archery.task = task
 		ahs.Archeries[work.Title] = &archery
 	}
 	return ahs
