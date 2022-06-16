@@ -60,8 +60,8 @@ func (task *Task)Uninit() {
 	*/
 }
 
-func (task *Task)LoadWorkList() []WorkInfo {
+func (task *Task)LoadWorkList() ([]WorkInfo,*Task) {
 	var res []WorkInfo
 	res = append(res,WorkInfo{task.Work,1,"github"})
-	return res
+	return res,task
 }
