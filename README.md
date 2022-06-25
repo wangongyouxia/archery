@@ -8,7 +8,23 @@
 ## 用户指引
 (1) 下载工程源码.
 
-(2) 修改work.go, 实现里面的Work()函数, 函数内执行单个压测操作, 并返回(bool,int)类型的两个数值, 第一个数值标记成功(true)与失败(false), 第二个数值为消耗的时间, 单位为毫秒.
+(2) 修改work.go, 实现里面的Work()函数, 函数内执行单个压测操作, 并返回(bool,int)类型的两个数值, 第一个数值标记成功(true)与失败(false), 第二个数值为消耗的时间, 单位为毫秒, 当有多个任务需要按比例同时测试时, 可按照如下格式修改LoadWorkList函数.
+```
+func (task *Task) Work1() (bool, int) {
+	...
+}
+
+func (task *Task) Work2() (bool, int) {
+	...
+}
+
+func (task *Task) LoadWorkList() ([]WorkInfo,*Task) {
+	var res []WorkInfo
+	res = append(res,WorkInfo{task.Work1,2,"title-1"}) // 2表示每个事务发两次请求
+	res = append(res,WorkInfo{task.Work2,5,"title-2"}) // 5表示每个事务发两次请求
+	return res,task
+}
+```
 
 (3) 执行`go build`如果你没有go，请先安装go.
 
