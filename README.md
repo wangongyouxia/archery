@@ -1,6 +1,6 @@
 # Archery
 
-一个golang压测框架，通过代码自定义测试场景，通过web ui指定qps，支持分布式部署。
+一个golang压测框架，通过代码自定义测试场景，通过web ui指定tps，支持分布式部署。
 
 ## 效果图展示
 ![image](https://github.com/wangongyouxia/archery/raw/master/static/result.png)
@@ -33,3 +33,39 @@
 
 ## 注意事项
 分布式执行时, 控制机(master)和执行机(slave)网络应能相互访问, 如果你要监控服务器资源, 被监控的机器和控制机(master)之间也应能相互访问.
+
+## 工具对比
+**time_wait积累，可用端口耗尽无法建立新连接，报错*Cannot assign
+requested address***
+
+出现原因：主动关闭tcp连接的一方，系统默认需要等待2MSL时间，才能释放连接资源，这段时间内该端口对应的四元组不可用，当产生速度比释放速度快，就会导致time_wait状态连接积累，常见于短链接测试，通常会出现报错Cannot
+assign requested address，可通过
+
+netstat -an\|grep TIME_WAIT\|wc -l
+
+确认此问题，出现问题时，这个数值通常是万数量级的，问题解决方法：
+
+编辑内核文件/etc/sysctl.conf，加入以下内容，解释文本要去掉
+
+```
+net.ipv4.tcp_syncookies = 1 表示开启SYN Cookies。当出现SYN等待队列溢出时，启用cookies来处理，可防范少量SYN攻击，默认为0，表示关闭；
+net.ipv4.tcp_tw_reuse = 1 表示开启重用。允许将TIME-WAIT sockets重新用于新的TCP连接，默认为0，表示关闭；
+net.ipv4.tcp_tw_recycle = 1 表示开启TCP连接中TIME-WAIT sockets的快速回收，默认为0，表示关闭，此配置在4+内核版本已经废弃。
+net.ipv4.tcp_fin_timeout = 30 修改系默认的 TIMEOUT 时间
+net.ipv4.ip_local_port_range = 1024 65535 修改可用端口范围
+```
+
+然后执行 /sbin/sysctl -p 让参数生效
+
+使用长连接，这是最好的解决办法，但有时候压测就是需要测短链接场景，则无法使用此方法
+
+**打开文件数过多，无法建立连接**
+
+因为在linux中，连接也算打开的文件，所以也受最大打开文件数限制，可以通过ulimit
+-Hn查看限制当前shell打开的文件数，这个问题通常报错Too many open
+files，可通过ls -1 /proc/\${PID}/fd \| wc
+-l命令查看当前打开的文件确认该问题，通过ulimit -n 65535解决
+
+**qps到一定数值就无法继续压上去**
+
+通常需要检查客户端CPU使用率、网络带宽限制，因为这两个限制通常不报错，但是会导致qps压不上去。

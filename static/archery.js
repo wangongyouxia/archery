@@ -120,9 +120,9 @@ window.onload = function(){
 					console.log(Object.keys(this.my_chart))
 					this.my_chart[key].setOption(opt);
 					if(Object.keys(response.data.one_second_data_obj).length == 1){
-						this.status_string = "Running: " + response.data['one_second_data_obj'][Object.keys(response.data['one_second_data_obj'])[0]]['request_num'] + " requests/sec"
+						this.status_string = "Running: " + response.data['one_second_data_obj'][Object.keys(response.data['one_second_data_obj'])[0]]['request_num'] + " requests/s"
 					} else {
-						this.status_string = Object.keys(response.data.one_second_data_obj).length + " Work " + "Running: " + this.getMappingValueArrayOfKey(response.data.one_second_data_obj, 'request_num') + " requests/sec"
+						this.status_string = Object.keys(response.data.one_second_data_obj).length + " Work " + "Running: " + this.getMappingValueArrayOfKey(response.data.one_second_data_obj, 'request_num') + " requests/s"
 					}
 					this.data_series[key].req_num_sum = response.data['one_second_data_obj'][key]['total_request_num']
 					this.data_series[key].succ_resp_num_sum = response.data['one_second_data_obj'][key]['total_succ_response_num']
@@ -355,7 +355,7 @@ window.onload = function(){
 			}
 			else if (response.data.server_status == 1){
 				if(Object.keys(response.data.one_second_data_obj).length == 1){
-					this.status_string = "Running: " + response.data['one_second_data_obj'][Object.keys(response.data['one_second_data_obj'])[0]]['request_num'] + " requests/sec"
+					this.status_string = "Running: " + response.data['one_second_data_obj'][Object.keys(response.data['one_second_data_obj'])[0]]['request_num'] + " requests/s"
 				} else {
 					this.status_string = "Running: " + Object.keys(response.data.one_second_data_obj).length + " work"
 				}
