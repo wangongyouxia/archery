@@ -20,8 +20,8 @@ func (task *Task) Work2() (bool, int) {
 
 func (task *Task) LoadWorkList() ([]WorkInfo,*Task) {
 	var res []WorkInfo
-	res = append(res,WorkInfo{task.Work1,2,"title-1"}) // 2表示每个事务发两次请求
-	res = append(res,WorkInfo{task.Work2,5,"title-2"}) // 5表示每个事务发两次请求
+	res = append(res,WorkInfo{task.Work1,2,"title-1"}) // 2表示每个事务发2次请求
+	res = append(res,WorkInfo{task.Work2,5,"title-2"}) // 5表示每个事务发5次请求
 	return res,task
 }
 ```
