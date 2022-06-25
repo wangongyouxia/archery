@@ -66,7 +66,7 @@ requested address***
 出现原因：主动关闭tcp连接的一方，系统默认需要等待2MSL时间，才能释放连接资源，这段时间内该端口对应的四元组不可用，当产生速度比释放速度快，就会导致time_wait状态连接积累，常见于短链接测试，通常会出现报错Cannot
 assign requested address，可通过
 
-`netstat -an\|grep TIME_WAIT\|wc -l`
+`netstat -an|grep TIME_WAIT|wc -l`
 
 确认此问题，出现问题时，这个数值通常是万数量级的，问题解决方法：
 
