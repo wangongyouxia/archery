@@ -50,18 +50,18 @@ requested address***
 出现原因：主动关闭tcp连接的一方，系统默认需要等待2MSL时间，才能释放连接资源，这段时间内该端口对应的四元组不可用，当产生速度比释放速度快，就会导致time_wait状态连接积累，常见于短链接测试，通常会出现报错Cannot
 assign requested address，可通过
 
-netstat -an\|grep TIME_WAIT\|wc -l
+`netstat -an\|grep TIME_WAIT\|wc -l`
 
 确认此问题，出现问题时，这个数值通常是万数量级的，问题解决方法：
 
-编辑内核文件/etc/sysctl.conf，加入以下内容，解释文本要去掉
+编辑内核文件/etc/sysctl.conf，加入以下内容
 
 ```
-net.ipv4.tcp_syncookies = 1 表示开启SYN Cookies。当出现SYN等待队列溢出时，启用cookies来处理，可防范少量SYN攻击，默认为0，表示关闭；
-net.ipv4.tcp_tw_reuse = 1 表示开启重用。允许将TIME-WAIT sockets重新用于新的TCP连接，默认为0，表示关闭；
-net.ipv4.tcp_tw_recycle = 1 表示开启TCP连接中TIME-WAIT sockets的快速回收，默认为0，表示关闭，此配置在4+内核版本已经废弃。
-net.ipv4.tcp_fin_timeout = 30 修改系默认的 TIMEOUT 时间
-net.ipv4.ip_local_port_range = 1024 65535 修改可用端口范围
+net.ipv4.tcp_syncookies = 1 #表示开启SYN Cookies。当出现SYN等待队列溢出时，启用cookies来处理，可防范少量SYN攻击，默认为0，表示关闭；
+net.ipv4.tcp_tw_reuse = 1 #表示开启重用。允许将TIME-WAIT sockets重新用于新的TCP连接，默认为0，表示关闭；
+net.ipv4.tcp_tw_recycle = 1 #表示开启TCP连接中TIME-WAIT sockets的快速回收，默认为0，表示关闭，此配置在4+内核版本已经废弃。
+net.ipv4.tcp_fin_timeout = 30 #修改系默认的 TIMEOUT 时间
+net.ipv4.ip_local_port_range = 1024 65535 #修改可用端口范围
 ```
 
 然后执行 /sbin/sysctl -p 让参数生效
