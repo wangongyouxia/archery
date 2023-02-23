@@ -200,6 +200,7 @@ type ArcheryHttpServer struct {
 	MonitorServer    bool
 	TargetServer     TargetServer
 	Task             Task
+	ShowPercentData  bool
 }
 
 func (ahs *ArcheryHttpServer) VerifySlave(slave Slave) {

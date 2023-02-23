@@ -99,6 +99,15 @@
 								<th>
 									成功平均延时
 								</th>
+								<th v-if="archery_status == 0 && show_percent_data">
+									95%延时
+								</th>
+								<th v-if="archery_status == 0 && show_percent_data">
+									99%延时
+								</th>
+								<th v-if="archery_status == 0 && show_percent_data">
+									最大延时
+								</th>
 								<th>
 									失败数
 								</th>
@@ -118,6 +127,15 @@
 								</td>
 								<td>
 									{{v.succ_resp_average_cost}}
+								</td>
+								<td  v-if="archery_status == 0 && show_percent_data">
+									{{v.succ_p95_delay}}
+								</td>
+								<td  v-if="archery_status == 0 && show_percent_data">
+									{{v.succ_p99_delay}}
+								</td>
+								<td  v-if="archery_status == 0 && show_percent_data">
+									{{v.succ_max_delay}}
 								</td>
 								<td>
 									{{v.failed_num_sum}}

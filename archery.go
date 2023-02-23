@@ -15,12 +15,13 @@ import (
 )
 
 type StartFlag struct {
-	port        int
-	mode        string
-	master_addr string
+	port         int
+	mode         string
+	master_addr  string
+	percent_data string
 }
 
-func NewArcheryHttpServer() ArcheryHttpServer {
+func NewArcheryHttpServer(show_percent_data bool) ArcheryHttpServer {
 	var ahs ArcheryHttpServer
 	ahs.Archeries = make(map[string](*Archery))
 	work_list,task := ahs.Task.LoadWorkList()
@@ -29,6 +30,7 @@ func NewArcheryHttpServer() ArcheryHttpServer {
 		archery.work = work.WorkFunc
 		archery.ratio = work.Ratio
 		archery.task = task
+		archery.show_percent_data = show_percent_data
 		ahs.Archeries[work.Title] = &archery
 	}
 	return ahs
@@ -90,8 +92,8 @@ func SingleExitHandler(ahs *ArcheryHttpServer) {
 }
 
 //单机部署函数，绑定函数，注册信号处理函数
-func StartSingle(port int) {
-	ahs := NewArcheryHttpServer()
+func StartSingle(port int, show_percent_data bool) {
+	ahs := NewArcheryHttpServer(show_percent_data)
 	http.HandleFunc("/", IndexHandler)
 	http.HandleFunc("/get_second_data", ahs.getSecondData)
 	http.HandleFunc("/slave_report", ahs.SlaveReport)
@@ -101,6 +103,7 @@ func StartSingle(port int) {
 	http.HandleFunc("/stop", ahs.StopTestHandler)
 	http.Handle("/static/", http.FileServer(http.Dir("./")))
 	SingleExitHandler(&ahs)
+	fmt.Println("Start sever...")
 	err := http.ListenAndServe(fmt.Sprintf(":%d", port), nil)
 	if err != nil {
 		log.Fatal(err)
@@ -144,6 +147,7 @@ func StartMonitor(master_addr string) {
 	http.HandleFunc("/get_server_second_data", ahs.GetTargetServerData)
 	http.HandleFunc("/exit", ahs.ExitHandler)
 	MonitorExitHandler(master_addr, string(json_str))
+	fmt.Println("Start monitor...")
 	err = httpd.Serve(listener)
 	if err != nil {
 		log.Fatal(err)
@@ -152,7 +156,7 @@ func StartMonitor(master_addr string) {
 
 //启动分布式部署的master
 func StartMaster(port int) {
-	ahs := NewArcheryHttpServer()
+	ahs := NewArcheryHttpServer(false)
 	ahs.Distribute = true
 	http.HandleFunc("/", IndexHandler)                         //返回前端页面
 	http.HandleFunc("/get_second_data", ahs.getSecondData)     //获取每秒数据，会同步请求每个slave，并汇总返回
@@ -165,7 +169,11 @@ func StartMaster(port int) {
 	http.HandleFunc("/get_server_second_data", ahs.GetTargetServerData)
 	http.Handle("/static/", http.FileServer(http.Dir("./")))
 	MasterExitHandler(&ahs)
-	http.ListenAndServe(fmt.Sprintf(":%d", port), nil)
+	fmt.Println("Start master...")
+	err := http.ListenAndServe(fmt.Sprintf(":%d", port), nil)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 //启动分布式部署的slave
@@ -201,7 +209,7 @@ func StartSlave(master_addr string) {
 	body, _ := ioutil.ReadAll(resp.Body)
 	log.Println(string(body))
 	resp.Body.Close()
-	ahs := NewArcheryHttpServer()
+	ahs := NewArcheryHttpServer(false)
 	ahs.Mode = 2
 	var httpd http.Server
 	http.HandleFunc("/get_second_data", ahs.getSecondData) //获取每秒数据函数
@@ -209,6 +217,7 @@ func StartSlave(master_addr string) {
 	http.HandleFunc("/stop", ahs.StopTestHandler)          //结束压测处理函数
 	http.HandleFunc("/exit", ahs.ExitHandler)              //退出进程函数
 	SlaveExitHandler(master_addr, string(json_str))
+	fmt.Println("Start slave...")
 	err = httpd.Serve(listener)
 	if err != nil {
 		log.Fatal(err)
@@ -221,9 +230,10 @@ func main() {
 	flag.StringVar(&config.mode, "mode", "single", "specify start mode, valid value: [single,slave,master,monitor]")
 	flag.IntVar(&config.port, "port", 8018, "specify listen port(for master or single mode)")
 	flag.StringVar(&config.master_addr, "master_addr", "127.0.0.1:8018", "specify the master address(ip or hostname)")
+	flag.StringVar(&config.percent_data, "percent_data", "false", "show percent data of whole test when finish")
 	flag.Parse()
 	if config.mode == "single" {
-		StartSingle(config.port)
+		StartSingle(config.port,config.percent_data == "true")
 	} else if config.mode == "master" {
 		StartMaster(config.port)
 	} else if config.mode == "slave" {

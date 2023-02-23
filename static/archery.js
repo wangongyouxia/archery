@@ -8,6 +8,7 @@ window.onload = function(){
 		active_nav_tab: 'start',
 		work_list: [],
 		my_chart: {},
+		show_percent_data: false,
 		my_chart_server: {},
 		archery_status: 0, //0:stop 1:start;
 		chart_controller: {},
@@ -38,12 +39,12 @@ window.onload = function(){
 		},
 		stop_test(){
 			axios.post("stop","stop").then(() => {
+				this.archery_status = 0
 				setTimeout(() => {
 					console.log(this.chart_controller)
 					clearInterval(this.chart_controller);
 					this.status_string = 'stop';
 					this.active_nav_tab = 'start';
-					this.archery_status = 0
 				},1000);
 			});
 		},
@@ -62,6 +63,7 @@ window.onload = function(){
 		get_test_data(){
 			axios.get("get_second_data").then((response) => {
 				for (key in response.data.one_second_data_obj) {
+					this.show_percent_data = response.data['one_second_data_obj'][key].show_percent_data
 					this.data_series[key].req_num.push(response.data['one_second_data_obj'][key]['request_num'])
 					this.data_series[key].succ_resp_num.push(response.data['one_second_data_obj'][key]['success_response_num'])
 					this.data_series[key].fail_num.push(response.data['one_second_data_obj'][key]['failed_num'])
@@ -126,6 +128,9 @@ window.onload = function(){
 					}
 					this.data_series[key].req_num_sum = response.data['one_second_data_obj'][key]['total_request_num']
 					this.data_series[key].succ_resp_num_sum = response.data['one_second_data_obj'][key]['total_succ_response_num']
+					this.data_series[key].succ_p95_delay = response.data['one_second_data_obj'][key]['whole_ninty_fifth_percent_cost_time']
+					this.data_series[key].succ_p99_delay = response.data['one_second_data_obj'][key]['whole_ninty_nine_percent_cost_time']
+					this.data_series[key].succ_max_delay = response.data['one_second_data_obj'][key]['whole_max_cost_time']
 					this.data_series[key].failed_num_sum = response.data['one_second_data_obj'][key]['total_failed_num']
 					this.data_series[key].succ_resp_average_cost = response.data['one_second_data_obj'][key]['total_succ_resp_time'] / response.data['one_second_data_obj'][key]['total_succ_response_num']
 				}
@@ -176,6 +181,7 @@ window.onload = function(){
 				// if (slave_num > 0){
 				// 	$("#slave").text(slave_num +' Slaves');
 				// }
+				console.log(this.archery_status,this.show_percent_data)
 			});
 		},
 		init_chart(id){
@@ -351,7 +357,7 @@ window.onload = function(){
 				]
 			});
 			if (response.data.server_status == 0) {
-				this.status_string = 'Stop'
+				this.status_string = 'stop'
 			}
 			else if (response.data.server_status == 1){
 				if(Object.keys(response.data.one_second_data_obj).length == 1){

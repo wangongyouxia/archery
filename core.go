@@ -3,6 +3,7 @@ package main
 import (
 	"math/rand"
 	"runtime"
+	//"fmt"
 
 	//"sort"
 	"sync"
@@ -12,21 +13,25 @@ import (
 
 //用于返回给前端的结构体，执行过程中，每秒更新一次，每收到一个前端的请求，就返回最新的数据
 type OneSecondData struct {
-	Req                      int64 `json:"request_num"`
-	SuccResp                 int64 `json:"success_response_num"`
-	AverageCostTime          int64 `json:"average_cost_time"`
-	FailedNum                int64 `json:"failed_num"`
-	Timestamp                int64 `json:"time_stamp"`
-	MinCostTime              int   `json:"min_cost_time"`
-	FiftyPercentCostTime     int   `json:"fifty_percent_cost_time"`
-	NintyPercentCostTime     int   `json:"ninty_percent_cost_time"`
-	NintyNinePercentCostTime int   `json:"ninty_nine_percent_cost_time"`
-	MaxCostTime              int   `json:"max_cost_time"`
-	RawData                  []int `json:"raw_data"`
-	TotalReqNum              int64 `json:"total_request_num"`
-	TotalRespNum             int64 `json:"total_succ_response_num"`
-	TotalSuccRespTime        int64 `json:"total_succ_resp_time"`
-	TotalFailedNum           int64 `json:"total_failed_num"`
+	Req                                int64 `json:"request_num"`
+	SuccResp                           int64 `json:"success_response_num"`
+	AverageCostTime                    int64 `json:"average_cost_time"`
+	FailedNum                          int64 `json:"failed_num"`
+	Timestamp                          int64 `json:"time_stamp"`
+	MinCostTime                        int   `json:"min_cost_time"`
+	FiftyPercentCostTime               int   `json:"fifty_percent_cost_time"`
+	NintyPercentCostTime               int   `json:"ninty_percent_cost_time"`
+	NintyNinePercentCostTime           int   `json:"ninty_nine_percent_cost_time"`
+	MaxCostTime                        int   `json:"max_cost_time"`
+	WholeNintyFifthPercentCostTime     int   `json:"whole_ninty_fifth_percent_cost_time"`
+	WholeNintyNinePercentCostTime      int   `json:"whole_ninty_nine_percent_cost_time"`
+	WholeMaxCostTime                   int   `json:"whole_max_cost_time"`
+	RawData                            []int `json:"raw_data"`
+	TotalReqNum                        int64 `json:"total_request_num"`
+	TotalRespNum                       int64 `json:"total_succ_response_num"`
+	TotalSuccRespTime                  int64 `json:"total_succ_resp_time"`
+	TotalFailedNum                     int64 `json:"total_failed_num"`
+	ShowPercentData                    bool  `json:"show_percent_data"`
 }
 
 //Archery结构体，用于存储压测执行过程中需要的各个数据
@@ -39,10 +44,12 @@ type Archery struct {
 	total_failed_num                int64
 	total_resp_time_in_one_second   int64
 	failed_num_in_one_second        int64
+	show_percent_data               bool
 	sleep_time_in_microsecond       int64
 	Status                          int64 //0:stop, 1:start
 	last_second_data                OneSecondData
 	Last_second_whole_test_data     []int
+	whole_test_data                 []int
 	slice_lock                      sync.Mutex
 	cpu_num                         int
 	work                            func() (bool, int)
@@ -54,16 +61,16 @@ type Archery struct {
 //停止执行压测函数
 func (archery *Archery) StopLoadTest() {
 	archery.Status = 0
-	atomic.StoreInt64(&(archery.request_num_in_one_second), 0)
-	atomic.StoreInt64(&(archery.succ_response_num_in_one_second), 0)
-	atomic.StoreInt64(&(archery.total_resp_time_in_one_second), 0)
-	atomic.StoreInt64(&(archery.failed_num_in_one_second), 0)
-	tmp := OneSecondData{}
-	tmp.TotalReqNum = archery.last_second_data.TotalReqNum             //  int64 `json:"total_request_num"`
-	tmp.TotalRespNum = archery.last_second_data.TotalRespNum           //  int64 `json:"total_succ_response_num"`
-	tmp.TotalSuccRespTime = archery.last_second_data.TotalSuccRespTime //  int64 `json:"total_succ_resp_time"`
-	tmp.TotalFailedNum = archery.last_second_data.TotalFailedNum
-	archery.last_second_data = tmp
+	//atomic.StoreInt64(&(archery.request_num_in_one_second), 0)
+	//atomic.StoreInt64(&(archery.succ_response_num_in_one_second), 0)
+	//atomic.StoreInt64(&(archery.total_resp_time_in_one_second), 0)
+	//atomic.StoreInt64(&(archery.failed_num_in_one_second), 0)
+	//tmp := OneSecondData{}
+	//tmp.TotalReqNum = archery.last_second_data.TotalReqNum             //  int64 `json:"total_request_num"`
+	//tmp.TotalRespNum = archery.last_second_data.TotalRespNum           //  int64 `json:"total_succ_response_num"`
+	//tmp.TotalSuccRespTime = archery.last_second_data.TotalSuccRespTime //  int64 `json:"total_succ_resp_time"`
+	//tmp.TotalFailedNum = archery.last_second_data.TotalFailedNum
+	//archery.last_second_data = tmp
 
 }
 
@@ -111,23 +118,25 @@ func (archery *Archery) DelayTimeAdjust(qps float64) {
 	}
 }
 
-func (archery *Archery) getLastSecondPercentData() (int, int, int, int, int) {
-	var min_value, fifty, ninty, ninty_nine, max_value int
-	snapshot_list := archery.Last_second_whole_test_data
-	snapshot_len := len(archery.Last_second_whole_test_data)
+func (archery *Archery) getLastSecondPercentData(snapshot_list []int,percent_list []float64) []int {
+	//fmt.Println("get",snapshot_list,percent_list)
+	snapshot_len := len(snapshot_list)
+	if snapshot_len == 0 {
+		return make([]int,len(percent_list),len(percent_list)*2)
+	}
 	//sort.Ints(snapshot_list)
-	if snapshot_len > 0 {
+	ret := []int{}
+	for _, percent := range percent_list {
 		//min_value = archery.Last_second_whole_test_data[0]
 		//max_value = archery.Last_second_whole_test_data[snapshot_len-1]
-		ninty = findKthSmallest(snapshot_list, int(float64(snapshot_len)*0.9)) //[int(float64(snapshot_len) * 0.9)]
-		ninty_nine = findKthSmallest(snapshot_list, int(float64(snapshot_len)*0.99))
-		fifty = findKthSmallest(snapshot_list, snapshot_len/2)
+		ret = append(ret,findKthSmallest(snapshot_list, int(float64(snapshot_len)*percent))) //[int(float64(snapshot_len) * 0.9)]
 	}
-	return min_value, fifty, ninty, ninty_nine, max_value
+	return ret
 }
 
 //统计上一秒数据放到OneSecondData中等待前端来取，并清零数据开始下一秒统计
 func (archery *Archery) Controller() {
+	var min_value, fifty, ninty, ninty_nine, max_value int
 	for archery.Status == 1 {
 		time.Sleep(time.Second)
 		var average_resp_time int64
@@ -138,8 +147,15 @@ func (archery *Archery) Controller() {
 		}
 		//fmt.Printf("total req:%d, total resp:%d, req/s:%d, resp/s:%d, average_resp_time:%d\n", archery.total_request_num, archery.total_succ_response_num, archery.request_num_in_one_second, archery.succ_response_num_in_one_second, average_resp_time)
 		now := int64(time.Now().Unix())
-		min_value, fifty, ninty, ninty_nine, max_value := archery.getLastSecondPercentData()
-		archery.last_second_data = OneSecondData{archery.request_num_in_one_second, archery.succ_response_num_in_one_second, average_resp_time, archery.failed_num_in_one_second, now, min_value, fifty, ninty, ninty_nine, max_value, archery.Last_second_whole_test_data, archery.total_request_num, archery.total_succ_response_num, archery.total_response_time, archery.total_failed_num}
+		percent_data := archery.getLastSecondPercentData(archery.Last_second_whole_test_data,[]float64{0.5,0.9,0.99})
+		fifty = percent_data[0]
+		ninty = percent_data[1]
+		ninty_nine = percent_data[2]
+		if archery.show_percent_data {
+			archery.whole_test_data = append(archery.whole_test_data,archery.Last_second_whole_test_data...)
+		}
+
+		archery.last_second_data = OneSecondData{archery.request_num_in_one_second, archery.succ_response_num_in_one_second, average_resp_time, archery.failed_num_in_one_second, now, min_value, fifty, ninty, ninty_nine, max_value, 0, 0, 0, archery.Last_second_whole_test_data, archery.total_request_num, archery.total_succ_response_num, archery.total_response_time, archery.total_failed_num,archery.show_percent_data}
 		archery.slice_lock.Lock()
 		archery.Last_second_whole_test_data = nil
 		archery.slice_lock.Unlock()
@@ -155,6 +171,14 @@ func (archery *Archery) GetSecondData(need_raw bool) OneSecondData {
 	res := archery.last_second_data
 	if !need_raw {
 		res.RawData = nil
+	}
+	if archery.show_percent_data && archery.Status == 0 {
+		whole_percent_data := archery.getLastSecondPercentData(archery.whole_test_data,[]float64{0.95,0.99,1.0})
+		//fmt.Println("percent result",whole_percent_data)
+		res.WholeNintyFifthPercentCostTime = whole_percent_data[0]
+		res.WholeNintyNinePercentCostTime = whole_percent_data[1]
+		res.WholeMaxCostTime = whole_percent_data[2]
+
 	}
 	return res
 }
@@ -245,6 +269,10 @@ func partition(a []int, l, r int) int {
 }
 
 func findKthSmallest(nums []int, k int) int {
+	//fmt.Println("findksmall",k,nums)
+	if (k >= len(nums)) {
+		k = len(nums)-1
+	}
 	rand.Seed(time.Now().UnixNano())
 	return quickSelect(nums, 0, len(nums)-1, k)
 }
